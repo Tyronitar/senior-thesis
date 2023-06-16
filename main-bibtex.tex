@@ -1,0 +1,544 @@
+%%%%%%%%%%%% 
+%% Please rename this main-bibtex.tex file and the output PDF to
+%% [lastname_firstname_graduationyear]
+%% before submission.
+%%
+%% This .tex file is for use with BibTeX. Please use
+%% main.tex instead if you prefer BibLaTeX.
+%%%%%%%%%%%%
+
+\documentclass[12pt]{caltech_thesis}
+\usepackage[hyphens]{url}
+\usepackage{lipsum}
+\usepackage{graphicx}
+
+\usepackage{todonotes}
+
+%% Tentative: newtx for better-looking Times
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[sectionbib]{bibunits}
+\defaultbibliographystyle{plainnat}
+\usepackage{enumitem}
+
+% Packages
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{mathtools}
+\usepackage{hyperref, cleveref}
+\usepackage{thmtools, thm-restate}
+\usepackage{algpseudocode, algorithm, amsthm}
+
+
+
+% Additional commands for ease of writing
+\newcommand{\defeq}{\vcentcolon=}
+\newcommand{\eqdef}{=\vcentcolon}
+\def\F{\mathbb{F}}
+\def\E{\mathbb{E}}
+\def\C{\mathbb{C}}
+\def\Var{\text{Var}}
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\phi}{\varphi}
+\newcommand{\rank}{\text{rank}}
+\newcommand{\codim}{\text{codim}}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{claim}{Claim}
+\newtheorem{definition}{Definition}
+
+
+\begin{document}
+
+% Do remember to remove the square bracket!
+\title{Worst-Case to Average-Case Reductions for Matrix Multiplication via Additive Combinatorics}
+\author{Nia McNichols}
+
+\degreeaward{Bachelors of Science in Computer Science}                 % Degree to be awarded
+\university{California Institute of Technology}    % Institution name
+\address{Pasadena, California}                     % Institution address
+\unilogo{caltech.png}                                 % Institution logo
+\copyyear{2023}  % Year (of graduation) on diploma
+\defenddate{June 12, 2023}
+
+\orcid{0000-0002-5132-9661}
+
+%% IMPORTANT: Select ONE of the rights statement below.
+\rightsstatement{All rights reserved}
+% \rightsstatement{All rights reserved except where otherwise noted}
+% \rightsstatement{Some rights reserved. This thesis is distributed under a [name license, e.g., ``Creative Commons Attribution-NonCommercial-ShareAlike License'']}
+
+%%  If you'd like to remove the Caltech logo from your title page, simply remove the "[logo]" text from the maketitle command
+\maketitle[logo]
+%\maketitle
+\begin{acknowledgements} 	 
+   I would like to thank my thesis advisor, Professor Chris Umans, for his guidance and mentorship. Working with you has been a wonderful experience, and it's been invaluable in my development as a researcher. Thank you for making time to meet with me every week to meet and check-in on my progress. Your constant support helped keep me motivated for this project and deepened my love for theoretical computer science. I couldn't have done any of this without you -- both literally and figuratively!
+\end{acknowledgements}
+
+\begin{abstract}
+   In the field of average-case complexity, we are concerned with how an algorithm performs on an average input, rather than the classical worst-case analysis. Of particular interest are worst-case to average-case reductions, that is transforming an algorithm that works on some fraction of inputs into a probabilistic one that works on \textit{all} inputs. Building on recent results in the field, we present a framework for average-case matrix multiplication algorithms. Explicitly, our framework provides a transformation for algorithms running in time $T(n)$ that work on a small fraction of inputs into ones running in time $\Tilde{O}(T(n))$ that work on all inputs, even in the case when this fraction rapidly tends to 0. Moreover, our framework requires fewer non-trivial results than similar methods, at the cost of minor asymptotic losses. 
+\end{abstract}
+
+
+% \bigskip
+
+% \begin{description}[leftmargin=2em,labelindent=0pt,labelsep=0pt]
+% \SingleSpacing
+% \item[] Cahn, J.~K.~B., A.~Baumschlager, et al. (2016). ``Mutations in adenine-binding pockets enhance catalytic properties of NAD (P) H-dependent enzymes''. In: \emph{Protein Engineering Design and Selection} 19.1, pp.~31--38. \textsc{doi}: \texttt{10.1093/ protein/gzv057}.
+
+% \item[] Cahn, J.~K.~B., S. Brinkmann-Chen, et al. (2015). ``Cofactor specificity motifs and the induced fit mechanism in class I ketol-acid reductoisomerases''. In: \emph{Biochemical Journal} 468.3, pp.~475--484. \textsc{doi}: \texttt{10.1042/BJ20150183}.
+% \\J.K.B.C participated in the conception of the project, solved and analyzed the crystal structures, prepared the data, and participated in the writing of the manuscript.
+% \end{description}
+
+\tableofcontents
+% \listoffigures
+% \listoftables
+
+\mainmatter
+
+
+\chapter{Introduction}
+The field of worst-case to average-case reductions is concerned with turning an algorithm that only works for some of its inputs into one that works on \textit{all} inputs. In this paper, we are particularly concerned with the case of reductions for matrix multiplication algorithms. Suppose we have an algorithm $\textsc{ALG}$ that computes $A\cdot B$ given matrices $A, B \in \F^{n \times n}$. However, this algorithm is faulty, and only works an $\alpha$ proportion of inputs, i.e. $\Pr_{A,B}[\textsc{ALG}(A,B) = A\cdot B] = \alpha$. Given such an algorithm, a natural question to ask is whether we can use it to create a new algorithm $\textsc{ALG}'$ that works for any inputs $A,B$. And if it is possible, how much more computational power is needed to achieve this worst-case behavior? In this paper, we examine such reductions for average-case algorithms for matrix multiplication that succeed on a constant fraction of inputs (e.g. 1\%), or even for an $\alpha$ that quickly tends to zero.
+
+
+
+\section{Background}
+
+The study of average-case complexity began with the work of Levin in \cite{Levin1986}. Although there are many problems thought to be intractable in the worst-case, this behavior may occur in practice rarely, making the average-case complexity a more practical measure of efficiency. In particular, there has been a large body of work on examining average-case complexity for many NP-complete problems (see \cite{bogdanov2021averagecase} for a comprehensive survey by Bogdanov and Trevisan of such works).
+
+For the problem of matrix multiplication, there is a weak reduction that requires the algorithm to have a high probability of success (see \Cref{sec:high}). More recently, \cite{asadi2022worstcase} has shown a much more powerful statement, which is restated below:
+\begin{theorem}[\cite{asadi2022worstcase}]
+\label{thm:asadi}
+    Let $\F = \F_p$ be a prime field, $n \in \mathbb{N}$, and $\alpha \defeq \alpha(n) \in (0, 1]$. Suppose that there is an algorithm $\mathsf{ALG}$ that in time $T(n)$, on input two matrices $A, B \in \F^{n\times n}$, computes $A\cdot B$ such that
+    \begin{equation*}
+        \Pr[\mathsf{ALG}(A, B) = A\cdot B] \geq \alpha,
+    \end{equation*}
+    where the randomness is over choice of $A, B$, and the randomness of $\mathsf{ALG}$. Then, 
+    \begin{itemize}
+        \item If $|\F| \leq 2/\alpha$, there exists a randomized algorithm $\textsc{ALG}'$ that for any $A,B \in \F^{n\times n}$ and $\delta > 0$, runs in time $\frac{\exp(O(\log^5(1/\alpha)))}{\delta}\cdot T(n)$, and outputs $A\cdot B$ with probability at least $1 - \delta$.
+        \item If $|\F| \geq 2/\alpha$, there exists a randomized algorithm $\textsc{ALG}'$ that for any $A,B \in \F^{n\times n}$ and $\delta > 0$, runs in time $O(\frac{1}{\delta \alpha^{4}}\cdot T(n))$, and outputs $A\cdot B$ with probability at least $1 - \delta$.
+    \end{itemize}
+\end{theorem}
+This theorem allows for an average-case reduction for even when $\alpha$ rapidly tends to 0. The main tool used to prove this theorem is a probabilistic form of the Quasi-Polynomial Bogolyubov-Ruzsa Lemma, originally proved by Sanders in \cite{Sanders2012}. Informally, this lemma states that for any set $A$, there is a large subspace $V$ contained in the sumset $4A$. The probabilistic version is restated below:
+
+\begin{lemma}[Probabilistic Quasi-Polynomial Bogolyubov-Ruzsa Lemma \cite{asadi2022worstcase}]
+    \label{lem:qpbrasadi}
+    Let $\F \defeq \F_p$ be a finite field and let $A \subseteq \F^n$ be a set of size $|A| = \alpha\cdot|\F|^n$ for some $\alpha \in [0,1]$.
+    Then, there exists a subspace $V \subseteq \mathbb{F}^n$ of dimension $\dim(V) \geq n - O(\log^4(1/\alpha))$ such that for all $v \in V$ it holds that
+    \begin{equation}
+    \label{eq:qpbrassadi}
+        \Pr_{a_1, a_2, a_3\in \mathbb{F}^n}[a_1, a_2 \in A, a_{3}, a_4 \in -A] \geq \Omega(\alpha^{5})\, ,
+    \end{equation}
+    where $a_4 = v - a_1 - a_2-a_3$. Furthermore, given query access to $A$, there is an algorithm that runs in time $O(\exp(\log^4(1/\alpha))\cdot\text{poly}\log(1/\delta)\cdot\text{poly}(n))$ and with probability $1-\delta$ computes the set $R = V^\perp$.
+\end{lemma}
+
+\section{Our Contribution}
+
+Our main result is building upon the work in \cite{asadi2022worstcase}. In particular, we present a proof of a new, more general version of \Cref{lem:qpbrasadi} that extends the argument to an arbitrary sumset $kA$, albeit with slightly worse parameters (see \Cref{lem:qpbr}). Moreover, our proof relies on more elementary machinery, making it easier to understand and build upon in future work.
+
+Using this version of the lemma, we provide an explicit reduction for matrix multiplication based on \Cref{thm:asadi} with negligible slowdown in the algorithm's performance. Formally, we show:
+\begin{restatable}{theorem}{thmreduction}
+\label{thm:reduction}
+    Let $\F \defeq \F_p$ be a finite field of order $p$, $n \in \mathbb{N}$, and $\alpha \defeq \alpha(n) \in (0, 1]$.
+    Suppose that there is an algorithm $\mathsf{ALG}$ that in time $T(n)$, on input two matrices $A, B \in \F^{n\times n}$, computes $A\cdot B$ such that
+    \begin{equation*}
+        \Pr[\mathsf{ALG}(A, B) = A\cdot B] \geq \alpha,
+    \end{equation*}
+    where the randomness is over choice of $A, B$, and the randomness of $\mathsf{ALG}$.
+    Then there is a randomized algorithm $\mathsf{ALG}'$ such that for all inputs $A, B \in \F^{n \times n}$ and $\delta > 0$, $\mathsf{ALG}'(A, B) = A \cdot B$ with probability at least $1 - \delta$ and runs in time $\frac{\exp(O(\log^5 (1/\alpha)))}{\delta}\cdot\log^2(1/\alpha)\cdot T(n)$.
+\end{restatable}
+\noindent In particular, if there's an algorithm running in time $T(n)$ with $\alpha > \exp(-\log^{1/c}(n))$ where $c > 5$, then the reduction gives a worst-case algorithm running in time $T(n)\cdot n^{o(1)}$.
+
+
+\chapter{Preliminaries}
+
+In this paper, we will make use of a number of tools from \textit{additive combinatorics}. The field of additive combinatorics lies at the intersection of combinatorics, number theory, and Fourier analysis. It is concerned with describing the properties of near-algebraic structures. We proceed by providing a basic introduction to many principles from additive combinatorics that we will make use of in proving our results.  We direct the reader to surveys by Lovett \cite{Lovett2017} and Trevisan \cite{Trevisan2009} for a more detailed introduction. 
+
+\section{Sumsets}
+Let $G$ be an abelian group and $A \subset G$. The sumset of $A$ is defined as $A+A = \{ a_1 + a_2 : a_1, a_2 \in A\}$. \nomenclature{Sumset}{For a set $A$, its sumset $A+A = \{ a_1 + a_2 : a_1, a_2 \in A\}$.} In the case where the set is added $n$ times we shorten it to $nA$. A classic problem in additive combinatorics is analyzing how the structure of $A+A$ relates to $A$. In particular, the case when the size of $A+A$ is not too much larger than $A$ gives an approximate notion of a subgroup.
+
+
+\section{Indicator Function}
+For a set $A \in \F^n$ of density $\alpha$ (i.e. $|A| = \alpha|\F|^n)$, let $1_A$ denote the indicator function of $A$, such that $1_A(x) = 1$ if $x \in A$ and 0 otherwise. Furthermore, we define a normalized indicator function $\phi_A \defeq \frac{|\F|^n}{|A|}\cdot 1_A = \alpha^{-1}\cdot 1_A$. This normalization makes it so that $\E_{x \in \F^n}[\phi(x)] = \alpha$.
+
+\section{Norms and Convolution}
+Let $f, g:\F^n \rightarrow \C$ be functions, where $\F \defeq \F_p$ is a prime field. We can define an inner product over the space of such functions as
+\begin{equation*}
+    \langle f, g \rangle = \E_{x \in \F^n}[f(x)g(x)].
+\end{equation*}
+For a $1\leq p \leq \infty$, the $\ell_p$ norm of a function $f$ is defined as 
+\begin{equation*}
+    \Vert f \Vert_p = \left( \E_{x\in\F^n}[|f(x)|^p] \right)^{1/p}.
+\end{equation*}
+
+For two functions $f,g$ their convolution is given by
+\begin{equation*}
+    (f \ast g)(x) = \E_{y \in \F^n}[f(x)g(x-y)].
+\end{equation*}
+In particular, for any $f$
+\begin{equation*}
+    (\phi_A\ast f)(x) = \E_{a \in A}[f(x-a)]. 
+\end{equation*}
+
+As a shorthand, we use $f^{(n)} = f \ast ... \ast f$ to denote the $n$-fold convolution of a function $f$ with itself.
+
+\section{Fourier Analysis.}
+For any finite abelian group $G$, a \textit{character} of $G$ is a function $\chi:G \rightarrow \mathbb{C}$ that satisfies
+\begin{equation*}
+    \chi(g_1g_2) = \chi(g_1)\chi(g_2), \quad \forall g_1, g_2 \in G. 
+\end{equation*}
+For the case of $\F^n$, where $\F \defeq \F_p$ is a prime field, the characters are $\chi_r(x) = \omega^{\langle r, x\rangle}$,
+where $\omega = e^{2i\pi/p}$ is a primitive $p$'th root of unity. For two characters $\chi_1,\chi_2$ their product  $\chi_1\chi_2$ is also a character, forming a group over all the characters of $G$. This group, denoted $\widehat{G}$, is referred to as the dual group of $G$, and the two groups are isomorphic. Going forward, we will simply refer to the characters of $\F^n$ as $\chi_r$ where $r \in \F^n$. Note that $\chi_0 = 1$.
+
+It is well-known that the characters form an orthogonal basis for functions $f: \F^n \rightarrow \C$. Since they form a basis, we can write any function $f$ as a linear combination of characters, called the \textit{Fourier expansion} of $f$:
+\begin{equation*}
+    f(x) = \sum_{r \in \F^n}\widehat{f}(r)\cdot \chi_r(x).
+\end{equation*}
+The \textit{Fourier coefficients} of this expansion are given by
+\begin{equation*}
+    \widehat{f}(r) = \langle f, \chi_r \rangle = \E_{x\in\F^n}[f(x)\chi_r(x)].
+\end{equation*}
+
+By the orthonormality of the characters, we obtain Parseval's identity:
+\begin{equation}
+\label{eq:parseval}
+    \mathbb{E}_{x \in \F^n}\left[f(x)\overline{g(x)}\right] = \sum_{r \in \F^n}\widehat{f}(r)\overline{\widehat{g}(r)}.
+\end{equation}
+In the case where $f = g$,
+\begin{equation*}
+    \Vert f \Vert_2^2 = \mathbb{E}_{x \in \F^n}\left[|f(x)|^2\right] = \sum_{r \in \F^n}|\widehat{f}(r)|^2.
+\end{equation*}
+For the particular case of the normalized indicator function $\phi_A$, we have by Parseval's identity:
+\begin{equation*}
+    \mathbb{E}_{x \in \F^n}\left[|\varphi_A(x)|^2\right] = \alpha^{-2}\cdot\mathbb{E}_{x \in \F^n}\left[|1_A(x)|^2\right] = \frac{1}{\alpha}.
+\end{equation*}
+
+A fundamental result in Fourier analysis is the convolution theorem, which states that for any two functions $f,g$, $\widehat{(f \ast g)}(r) = \widehat{f}(r)\widehat{g}(r)$. This allows us to expand the convolution of two functions as
+\begin{equation*}
+    (f \ast g)(x) = \sum_{r \in \F^n}\widehat{f}(r)\widehat{g}(r)\chi_{r}(x).
+\end{equation*}
+
+\chapter{Overview of Reduction}
+\label{sec:overview}
+In this chapter, we describe at a high-level the problem we are trying to solve. We first consider the \textit{high-agreement regime}, when the algorithm works with high-probability. Next we examine what changes when given an algorithm with a lower success probability, and why that motivates our construction. We will also discuss the tools we will use in our reduction, namely \textit{local correction using random low-rank shifts} and the \textit{Probabilistic Quasi-Polynomial Bogolyubov-Ruzsa lemma} (\Cref{lem:qpbr}). 
+
+
+\section{High agreement regime}
+\label{sec:high}
+
+Recall that in the problem of matrix multiplication, we are given two matrices $A,B \in \F^{n\times n}$ and asked to compute $A \cdot B$. In this case we are also given an algorithm $\textsc{ALG}$ that runs in time $T(n)$ and is correct on an $\alpha$-fraction of all possible inputs. 
+
+For the simplicity of this exposition, we consider the case where the first matrix we are given $A$ is one such that $\Pr_{B'}[\textsc{ALG}(A, B') = A \cdot B'] \geq \alpha$, $\textsc{ALG}$ is deterministic, $\alpha$ is contant, and $\F = \F_2$. 
+
+Suppose that $\alpha$ is large (e.g. 99\%).
+In this case, there is a straightforward reduction that uses linear local correction \cite{BLUM1993549}:
+
+\begin{algorithm}
+\caption{High-Agreement Reduction}\label{alg:high}
+\textbf{Input:} A matrix multiplication algorithm $\textsc{ALG}$, and matrices $A,B \in \F^{n \times n}$\\
+\textbf{Output:} $A \cdot B$
+\begin{algorithmic}[1]
+\State Sample a random matrix $R \in \F^{n \times n}$ uniformly at random
+\State Return $C$ = \textsc{ALG}(A, R) + \textsc{ALG}(A, B - R)
+\end{algorithmic}
+\end{algorithm}
+
+Let $X$ denote the subset of matrices $B$ such that $\textsc{ALG}(A, B) = A \cdot B$. By assumption, the density of $X$ is 0.99. Note that since $R$ is sampled uniformly, $B-R$ is also uniformly random. Then by the union bound $\Pr[C = A\cdot B] \geq 1 - 2\cdot 0.01 > 0.9$ for \textit{all} matrices $A,B$. Moreover, it is clear that this algorithm rubns in time $O(T(n))$. Thus, for the high-agreement regime, an algorithm as simple as \Cref{alg:high} is sufficient.
+
+But suppose we're given a more malicious algorithm. Suppose we use the following example from \cite{asadi2022worstcase}:
+\begin{equation*}
+    \textsc{ALG}(A, B) = \begin{cases}
+        A\cdot B & B_{1,1} = 0\\
+        0 & B_{1,1} = 1
+    \end{cases}
+\end{equation*}
+Our original decomposition of $B$ will work 50\% of the time. However, if $B_{1,1} = 1$, there is no combination of matrices $\sum_i B_i = B$ such that the decomposition will work on each $B_i$. So \Cref{alg:high} will still not work on all pairs of matrices.
+
+In general, this method will break down in the \textit{low-agreement regime}, when $\alpha$ is, say, less than 1\%. For such algorithms, we require stronger tools which we discuss in the following sections.
+
+\section{Local Correction Using Random Low-Rank Shifts}
+
+We are somewhat able to overcome this obstacle by utilizing random low-rank shifts. The basic idea of this strategy is similar to \Cref{alg:high}. We attempt to decompose our matrices $A,B$ into multiple ones such that they are uniform over the entire space. The key difference is that we also utilize low-rank matrices in our decomposition which allows us to explicitly compute parts of the decomposition rather than relying on $\textsc{ALG}$. Indeed, for a matrix $L$ with rank $\leq k$, we can compute multiplications with it in time $O(n^2\cdot k)$. The reduction is given explicitly below:
+\begin{algorithm}
+\caption{Low-Rank Correction Reduction}\label{alg:low-rank}
+\textbf{Input:} A matrix multiplication algorithm $\textsc{ALG}$, and matrices $A,B \in \F^{n \times n}$\\
+\textbf{Output:} $A \cdot B$
+\begin{algorithmic}[1]
+\State Construct two random rank-$k$ matrices $L_A^k, L_B^k$ (as in \Cref{def:mka}).
+\State Sample two matrices $S_1, T_1$ uniformly from $\F^{n\times n}$
+\State Set $S_2 = A + L_A^k - S_1$ such that $A + L_A^k = S_1 + S_2$
+\State Set $T_2 = B + L_B^k - T_1$ such that $B + L_B^k = T_1 + T_2$
+\State Set $O_L = \sum_{1 \leq i, j \leq 2} \textsc{ALG}(S_i, T_j)$.
+\State Return $O = O_L - A\cdot L_A^k - L_A^k \cdot B - L_A^k \cdot L_B^k$.
+\end{algorithmic}
+\end{algorithm}
+
+It's crucial that we use low-rank matrices, as it allows us to compute the multiplications in step 6 explicitly in $O(n^2 \cdot k)$ time. Then the time complexity of the entire procedure is $O(T(n))$, as $k$ can be an arbitrary constant.
+
+It's not hard to see that $S_1, S_2, T_1, T_2$ are all uniformly distributed. And so with the malicious algorithm from \Cref{sec:high}, the probability we succeed is $\Pr[T_{1_{1,1}} = T_{2_{1,1}} = 0] = 0.25$. This can be further boosted by repeating the procedure, and verifying the output using Freivald's Algorithm (\Cref{lem:freivald}). This would result in negligible slowdown, as the success probability is constant.
+
+At first glance, it seems like this algorithm has resolved our problem. But even still, one can conceive of a malicious $\textsc{ALG}$ that breaks this procedure. For example, let $M_{B, X} = \{ M \in \F^{n\times n} : \exists\ L_B^k\ \text{such that}\ M = B + L_B^k - X\}$ for a matrix $X \in \F^{n \times n}$. For $M_{B, T_1}$ this is the set of possible $T_2$ \Cref{alg:low-rank} creates given matrix $B$ and randomly sampled $T_1$. Suppose the given algorithm only works on $M_{B, X}$ for a fixed subset of $B \in \F^{n\times n}$ with density, say 1/4. Then if given a $B$ not in this subset, no matter which random $T_1, L_B^k$ are sampled, \Cref{alg:low-rank} will always fail.
+
+While we haven't been able to complete resolve our problem, we have identified a potentially powerful tool in low-rank random shifts. We can expand the number of matrices our reduction works on by randomly shifting our input matrices, and we can avoid using $\textsc{ALG}$ as frequently by using low-rank matrices.
+
+\section{Probabilistic Quasi-Polynomial Bogolyubov-Ruzsa Lemma}
+
+The main idea for resolving our problem lies in additive combinatorics. As before, Let $X$ denote the subset of matrices $B$ such that $\textsc{ALG}(A, B) = A \cdot B$. We will take advantage of the fact that the sumset $kX$ has special structure. 
+
+Explicitly, we will show that there is a large vector space $V \subseteq \F^{n\times n}$ contained in $kX$. Given this subspace, we can decompose any matrices $A,B \in V$ into $A = X_1 + ... + X_k$ and $B = Y_1 + ... + Y_k$ with each $X_i,Y_j \in X$. Then, instead of computing $\textsc{ALG}(A,B)$, we can compute $\textsc{ALG}(X_i, Y_j)$, which are all guaranteed to work by the definition of $X$.
+
+However, showing the existence of this subspace is not enough by itself. We need to show that for any matrix $A \in V$, there are \textit{many} decompositions $A = X_1 + ... + X_k$. This allows us to efficiently sample such a decomposition. Formally, we prove the following version of the Probabilistic Quasi-Polynomial Bogolyubov-Ruzsa lemma (building upon \Cref{lem:qpbrasadi} from \cite{asadi2022worstcase}):
+
+\begin{restatable}[Probabilistic Quasi-Polynomial Bogolyubov-Ruzsa Lemma]{lemma}{lemqpbr}
+    \label{lem:qpbr}
+    Let $\F \defeq \F_p$ be a finite field and let $A \subseteq \F^n$ be a set of size $|A| = \alpha\cdot|\F|^n$ for some $\alpha \in (0,1]$.
+    Let $k \geq \Omega(\log 1/\alpha)$ be an even integer greater than 2.
+    Then, there exists a subspace $V \subseteq \mathbb{F}^n$ of dimension $\dim(V) \geq n - O(\log(1/\alpha))$ such that for all $v \in V$ it holds that
+    \begin{equation}
+    \label{eq:qpbr}
+        \Pr_{a_1, ..., a_{k-1} \in \mathbb{F}^n}[a_1, ..., a_{k/2} \in A, a_{k/2 + 1}, ..., a_k \in -A] \geq \Omega(\alpha^{k+1})\, ,
+    \end{equation}
+    where $a_k = v - a_1 - ... - a_{k-1}$.
+\end{restatable}
+
+This proves sufficient for any matrices $A,B \in V$, but recall that we want our algorithm to work on \textit{any} pair of matrices. This is where the low-rank shifts come in handy. We use the fact that for \textit{any} matrix $A \in \F^{n \times n}$, a random low-rank shift moves our matrix to $V$ with constant probability (\Cref{lem:m2ka} \cite{asadi2022worstcase}). Moreover, the low-rank allows us to use these shifts without incurring a major penalty in time complexity. These two tools combined allow us to construct our reduction, in the next section.
+
+\chapter{Worst-Case to Average-Case Reductions for Matrix Multiplication}
+In this chapter we prove our main result, a worst-case to average case reduction for matrix multiplication:
+
+\thmreduction*
+
+We remark that is sufficient to only consider fields such that  $|\F| \leq \frac{2}{\alpha}$.
+For large enough fields, we can achieve a reduction using standard interpolation methods (See Section 4.2 in \cite{asadi2022worstcase}).
+
+We divide this proof into two parts.
+First, we prove  \Cref{thm:reduction} in \Cref{sec:proof-reduction} under the assumption that \Cref{lem:qpbr} holds.
+The proof for the latter is shown in \Cref{sec:proof-qpbr}.
+
+
+
+\section{Reduction for Matrix Multiplication}
+\label{sec:proof-reduction}
+In this section, we prove \Cref{thm:reduction}. In particular, we prove this theorem for $|\F| \leq 2/\alpha$, where $\alpha$ is the success probability of the algorithm. When the field is larger than this, we can apply standard interpolation methods to boost the algorithm. In order to prove \Cref{thm:reduction}, we will need to use Freivald's Algorithm:
+\begin{lemma}[Freivald's Algorithm]
+\label{lem:freivald}
+    Given matrices $A, B, C \in \F^{n\times n}$, there is a probabilistic algorithm that verifies whether $A\cdot B = C$ with error probability $2^{-k}$ in $O(kn^2)$ time.
+\end{lemma}
+
+Next, we will need the following definition from \cite{asadi2022worstcase}.
+
+\begin{definition}[\cite{asadi2022worstcase}]
+\label{def:mka}
+    For a matrix $A \in \F^{n\times n}$ and $k \in [n]$, let $M^k_A = A + L^k_A$ where we define $L^k_A$ as follows:
+    \begin{enumerate}
+        \item Choose a random subset $S$ of size $k$ from $[n]$.
+        \item For all $i \in S$, sample the $i$'th row of 
+        $L^k_A$ uniformly at random from $\F^n$.
+        \item For the remaining rows $j \in [n]\setminus S$, let
+        the $j$'th of $L^k_A$ be a random linear combination of
+        rows in $S$.
+    \end{enumerate}
+\end{definition}
+We remark that $\rank(L^k_A) \leq k$, as the $n-k$ rows not in 
+$S$ are linear combinations of those in $S$. Moreover, if the 
+$k$ randomly sampled rows are not linearly independent, we can 
+throw them out and re-sample. This event has constant 
+probability, and so this procedure is doable in time $O(kn^2)$.
+
+The purpose of $L^k_A$ is to shift the matrix $A$ to a subspace of our choice. Explicitly, we use the fact that $M^{2k}_A$ belongs to any subspace 
+$V \subseteq \F^{n\times n}$ with $\codim(V) \leq k$ with 
+constant probability. For this, we use Lemma 4.8 from
+\cite{asadi2022worstcase} which is restated below:
+\begin{lemma}[\cite{asadi2022worstcase}]
+\label{lem:m2ka}
+    Given a matrix $A \in \F^{n\times n}$ and $k \in [n]$, for any subspace $V \subseteq \F^{n \times n}$ with $\codim(V) \leq k$, we have
+    \begin{equation}
+        \Pr[M^{2k}_A \in V] \geq \frac{1}{2|\F|^k}.
+    \end{equation}
+\end{lemma}
+
+We now prove \Cref{thm:reduction} by defining and analyzing the reduction. This reduction is very similar to that of \cite{asadi2022worstcase}.
+
+\begin{algorithm}
+    \caption{Matrix Multiplication Reduction}\label{alg:mat}
+\textbf{Input:} A matrix multiplication algorithm $\textsc{ALG}$, and matrices $A,B \in \F^{n \times n}$\\
+\textbf{Output:} $A \cdot B$
+\begin{algorithmic}[1]
+
+\State Set $k \geq \Omega(\log(1/\alpha))$ such that $k$ is an even integer greater than 2.
+\State Construct the matrices $M^{2k}_A, M^{2k}_B$
+\State Sample $k-1$ matrices $R_1, ..., R_{k-1} \in \F^{n \times n}$ uniformly at random. Set $R_k = M^{2k}_A - \sum_{i=1}^{k-1}R_i$.
+\State Sample $k-1$ matrices $S_1, ..., S_{k-1} \in \F^{n \times n}$ uniformly at random. Set $S_k = M^{2k}_B - \sum_{j=1}^{k-1}S_j$.
+\State Set $C' = \sum_{1 \leq i,j \leq k}\textsc{ALG}(R_i,S_j)$
+\State Set $C = C' - A\cdot L^{2k}_B - L^{2k}_A\cdot B - L^{2k}_A \cdot L^{2k}_B$.
+\State Check whether $C = A \cdot B$ using \Cref{lem:freivald}. If it does, return $C$.
+\end{algorithmic}
+\end{algorithm}
+
+\begin{proof}[Proof of \Cref{thm:reduction}]
+
+\textbf{Correctness:} Define $X \defeq \left\{ A \in \F^{n \times n} : \Pr_B[\textsc{ALG}(A, B) = A\cdot B] \geq \alpha / 2 \right\}$. Also, for a matrix $M$, define $Y_M = \left\{ N \in \F^{n \times n} : \textsc{ALG}(M, N) = M \cdot N \right\}$. It is easy to see by a counting argument that $X$ and $Y_M$ have density $\geq \alpha / 2$, where $M \in X$.
+
+By applying \Cref{lem:qpbr}, we can assume there is some subspace $V_X$ with $\dim(V_X) \geq n - O(\log(1/\alpha))$. By \Cref{lem:m2ka}, we have
+\begin{equation*}
+    \Pr[M^{2k}_A \in V_X] \geq \frac{1}{2|\F|^{k}}.
+\end{equation*}
+Assuming that indeed $M^{2k}_A \in V_x$ we have by \Cref{lem:qpbr}
+\begin{equation*}
+    \Pr_{R_i, ..., R_{k-1}}[R_1, ..., R_{k/2}\in X, R_{k/2 + 1}, ..., R_k \in -X] \geq \Omega(\alpha^{k+1}).
+\end{equation*}
+
+For each $R_i$ with $i \in [k]$ we can define a corresponding $Y_{R_i}$. Applying \Cref{lem:qpbr} to each of these sets we define the subspace $V_{Y_{R_i}}$ with co-dimension at most $O(\log(1 / \alpha))$. We then define $V_Y = \bigcap_{i=1}^k V_{Y_{R_i}}$. Therefore, 
+\begin{equation*}
+    \codim(V_Y) \leq \sum_{i=1}^k \codim(V_{Y_{R_i}}) \leq k^2.
+\end{equation*}
+By applying \Cref{lem:m2ka} to $V_Y$
+\begin{equation*}
+    \Pr[M^{2k}_B \in V_Y] \geq \frac{1}{2|\F|^{k^2}}.
+\end{equation*}
+If $M^{2k}_B \in V_Y$, then for each $i \in [k]$, by \Cref{lem:qpbr},
+\begin{equation*}
+    \Pr_{S_1, ..., S_{k-1}}[S_1, ..., S_{k/2}\in Y_{R_i}, S_{k/2 + 1}, ..., S_k \in -Y_{R_i}] \geq \Omega(\alpha^{k+1}).
+\end{equation*}
+
+We remark that because $L^{2k}_A$ and $L^{2k}_B$ have rank at most $2k$, the multiplications in Step 6 can be computed deterministically in $O(n^2 \cdot k)$ time.
+
+All of the events above are independent. Therefore, the algorithm has the following success probability:
+\begin{equation*}
+    \Pr[\text{\Cref{alg:mat} succeeds}] \geq \frac{\Omega\left(\alpha^{(k+1)^2}\right)}{O(|\F|)^{O(k^2)}}\\
+    \geq \exp(-\log^5(1/\alpha)).
+\end{equation*}
+Therefore, by repeating the algorithm $\frac{\exp(\log^5(1/\alpha))}{\delta}$ times and checking the output with \Cref{lem:freivald}, we achieve a success probability of at least $1-\delta$ for any matrices $A, B \in \F^{n\times n}$.
+
+\hfill\newline
+\textbf{Time Complexity:} The complexity of the algorithm is dominated by the $\frac{\exp(\log^5(1/\alpha))}{\delta}$ calls to \Cref{alg:mat}. The running time of  $\Cref{alg:mat}$ is itself dominated by the $k^2$ calls to $\textsc{ALG}$. Thus the overall runtime of the boosted reduction is $O\left(\frac{\exp(\log^5(1/\alpha))}{\delta}\cdot k^2\cdot T(n) \right)$. When $\alpha > \exp(-\log^{1/c}(n))$, where $c \geq \Omega(5)$, this reduction turns a $T(n)$ time average-case algorithm into a $T(n)\cdot n^{o(1)}$ time worst-case algorithm.
+    
+\end{proof}
+
+
+
+
+
+
+\section{Proof of Probabilistic Quasi-Polynomial Bogolyubov-Ruzsa Lemma}
+\label{sec:proof-qpbr}
+
+In this section we provide a proof for \Cref{lem:qpbr}, which is restated below:
+\lemqpbr*
+In order to complete this proof, we will first need to prove the following lemma:
+\begin{lemma}
+\label{lem:large-subspace}
+    Let $A\subseteq \F^n$ be a set with size $|A| = \alpha \cdot |\F|^n$.
+    Let $k \geq \Omega(- \log \alpha)$ be an even integer greater than 2.
+    Then there exists a subspace $V \subseteq \F^n$ of dimension $\dim(V) \geq n - O(\log(1/\alpha))$ such that for any $v \in V$ it holds that
+    \begin{equation}
+        \Pr_{\substack{a_1, ..., a_{k/2} \in A\\ a_{k/2 + 1},...,a_{k-1}\in -A}} \left[ v - a_1 - ... - a_{k-1} \in -A \right] \geq \Omega(\alpha^2).
+    \end{equation}
+\end{lemma}
+
+\begin{proof}[Proof of \Cref{lem:large-subspace}]
+
+Define the spectrum of $A$ to be the set of its large Fourier coefficients:
+\begin{equation*}
+    \text{Spec}_{\gamma}(A) \defeq \{ a \in \F^n : |\widehat{\varphi_{A}}(a)| \geq \gamma  \},
+\end{equation*}
+for $0 < \gamma < 1$.
+One can use Parseval's identity (\Cref{eq:parseval}) to bound the size of the spectrum
+\begin{equation*}
+    |\text{Spec}_\gamma(A)| \leq \frac{|\F|^n}{|A|}(1/\gamma)^2 \implies \dim (\text{Spec}_\gamma(A)) \leq \frac{|\F|^n}{|A|}(1/\gamma)^2
+\end{equation*}
+To achieve a tighter, non-trivial bound, we make use of Chang's lemma \cite{Chang2002}:
+\begin{lemma}[Chang's Lemma \cite{Chang2002}]
+\label{lem:chang}
+    Let $X \subseteq \F^n$ with size $|X| = \beta\cdot |\F|^n$, and let $0 < \gamma < 1$. Then,
+    \begin{equation}
+        |\text{\normalfont{Spec}}_\gamma(X)| \leq O \left(  \frac{\log(1/\beta)}{\gamma^2}\right).
+    \end{equation}
+\end{lemma}
+Define a subspace $V$ to be the orthogonal subspace to $\text{Spec}_\gamma(A)$, 
+\begin{equation*}
+    V \defeq \text{Spec}_{\gamma}(A)^{\perp} = \{ v \in \F^n : \langle v, s \rangle = 0\ \forall\ s \in \text{Spec}_{\gamma}(A) \}.
+\end{equation*}
+By setting $\gamma = \alpha^{1/(k-2)}$ and $k>2$ to be an even integer such that $k \geq \Omega(\log 1/\alpha)$, Chang's lemma implies that $\dim(V) \geq n - O(\log(1/\alpha))$.
+
+We now show that $V$ satisfies the condition of \Cref{lem:large-subspace}.
+We will rewrite the probability using a convolution:
+\begin{equation*}
+    \Pr_{\substack{a_1, ..., a_{k/2} \in A\\ a_{k/2 + 1},...,a_{k-1}\in -A}} \left[ v - a_1 - ... - a_{k-1} \in -A \right]  = \left(\varphi_A^{(k/2)}\ast\varphi_{-A}^{(k/2 - 1)}\ast 1_{-A}\right)(v).
+\end{equation*}
+Note that by the definition of the Fourier coefficients, we have $\widehat{\varphi_{-A}}(r) = \overline{\widehat{\varphi_A}(r)}$ for all $r$.
+Indeed,
+\begin{align*}
+    \widehat{\varphi_{-A}}(r) = \frac{1}{|\F|^n}\sum_{x \in \F^n}\varphi_{-A}(x)\chi_{r}(x) &= \frac{1}{\alpha|\F|^n}\sum_{x \in \F^n}1_{-A}(x)\chi_{r}(x)\\
+    &= \frac{1}{|A|}\sum_{a \in -A} \chi_{r}(a)\\
+    &= \frac{1}{|A|}\sum_{a \in A} \overline{\chi_{r}(a)}\\
+    &= \frac{1}{|\F|^n}\sum_{x \in \F^n}\phi_{A}(x)\overline{\chi_{r}(a)}\\
+    &= \overline{\widehat{\varphi_A}(r)}
+\end{align*}
+Next, observe that
+\begin{equation*}
+    \sum_{r \in F \setminus \text{Spec}_{\gamma}(A)} |\widehat{\varphi_{A}}(r)|^k < \gamma^{k-2} \cdot \left( \sum_{r \in F \setminus \text{Spec}_{\gamma}(A)} |\widehat{\varphi_{A}}(r)|^2 \right) \leq \gamma^{k-2}\left( \frac{1}{\alpha} - 1\right),
+\end{equation*}
+where for the second inequality we used $\sum_{r} |\widehat{\varphi_A}(r)|^2 = \frac{1}{\alpha}$ and $|\widehat{\varphi_A}(0)|^2 = 1$.
+Thus,
+\begin{align*}
+    \left(\varphi_A^{(k/2)}\ast\varphi_{-A}^{(k/2 - 1)}\ast 1_{-A}\right)(v) &= \alpha\cdot\left(\varphi_A^{(k/2)}\ast\varphi_{-A}^{(k/2)}\right)(v)\\
+    &= \alpha \cdot \sum_{r \in \F^n} \widehat{\varphi_{A}}(r)^{k/2}\widehat{\varphi_{-A}}(r)^{k/2}\chi_r(v)\\
+    &= \alpha \cdot \sum_{r \in \F^n} |\widehat{\varphi_{A}}(r)|^{k}\chi_r(v)\\
+    &= \alpha \left( |\widehat{\varphi_{A}}(0)|^{k} \chi_0(v) + \sum_{r \in \text{Spec}_{\gamma}(A)\setminus\{0\}} |\widehat{\varphi_{A}}(r)|^{k} \chi_r(v)\quad+ \sum_{r \in F \setminus \text{Spec}_{\gamma}(A)} |\widehat{\varphi_{A}}(r)|^{k} \chi_r(v) \right)\\
+    &\geq  \alpha \left( 1 + \sum_{r \in \text{Spec}_{\gamma}(A)\setminus\{0\}} \gamma^k\cdot 1  - \sum_{r \in F \setminus \text{Spec}_{\gamma}(A)} |\widehat{\varphi_{A}}(r)|^{k} \right)\\
+    &\geq \alpha \left(1 + (|\text{Spec}_{\gamma}(A)| - 1)\gamma^k - \gamma^{k-2}\left(\frac{1}{\alpha} - 1\right) \right)\\
+    &\geq \alpha \left(1 + (|\text{Spec}_{\gamma}(A)| - 1)\gamma^k - 1 + \alpha\right)\\
+    &\geq \Omega(\alpha^2),
+\end{align*}
+as required.
+\end{proof}
+
+We now proceed with proving \Cref{lem:qpbr}.
+We first can rewrite the probability in \Cref{eq:qpbr}, using the fact that $\Pr_{a_i \in F^n}[a_i \in A] = \Pr_{a_i \in F^n}[a_i \in -A]$.
+Then, by using the chain rule for probability:
+\begin{equation*}
+\label{eq:chain-rule}
+    \Pr[a_1, ..., a_{k/2} \in A, a_{k/2 + 1}, ..., a_k \in -A] = \prod_{i=1}^{k} \Pr[a_i \in A \mid a_1, ..., a_{i-1} \in A].
+\end{equation*}
+Each $a_1, ..., a_{k-1}$ are sampled independently, so $\Pr[a_i \in A \mid a_1, ..., a_{i-1} \in A] = \Pr[a_i \in A] = \alpha$ for all $1 \leq i \leq k - 1$.
+Thus,
+\begin{align*}
+    \Pr_{a_1, ..., a_{k-1} \in \mathbb{F}^n}&[a_1, a_2, ..., a_{k/2} \in A, a_{k/2 + 1}, ..., a_k \in -A] \\&= \prod_{i=1}^{k} \Pr[a_i \in A \mid a_1, ..., a_{i-1} \in A]
+    \\&=\alpha^{k-1}\cdot\Pr[a_k \in -A \mid a_1, ...,  a_{k-1} \in A]\\
+    &= \alpha^{k-1}\cdot \Pr[a_k \in -A \mid a_1, ..., a_{k/2} \in A, a_{k/2 + 1}, ..., a_{k-1} \in -A]\\
+    &= \alpha^{k-1}\cdot \Pr_{\substack{a_1, ..., a_{k/2} \in A\\ a_{k/2 + 1},...,a_{k-1}\in -A}} \left[ v - a_1 - ... - a_{k-1} \in -A \right]\\
+    &\geq \Omega(\alpha^{k+1}),
+\end{align*}
+where the last inequality holds by \Cref{lem:large-subspace}.
+This concludes the proof.
+\hfill$\square$
+
+\chapter{Discussion and Conclusion}
+
+In this chapter we discuss the implications of \Cref{thm:reduction}, and compare our results with those of \cite{asadi2022worstcase}. Moreover, we identify some potential directions for further research.
+
+\section{Discussion of \Cref{thm:reduction}}
+First note that when $k = 4$, \Cref{lem:qpbr} is extremely similar to the analogue in \cite{asadi2022worstcase}. They main differences are that our version requires that $\alpha \geq \Omega(\exp(-4))$, and the subspace $V$ we guarantee has $\codim(V) \leq O(\log(1/\alpha))$ instead of $O(\log^4(1/\alpha))$. These differences propagate into our reduction \Cref{thm:reduction}, adding an extra $\log^2(1/\alpha)$ term to the time complexity of the algorithm. However, this factor becomes negligible for sufficiently large $n$.
+
+The main benefits of our results are a version of the Quasi-polynomial Bogolyubov-Ruzsa lemma that allows for an arbitrary sumset $kA$, and a simpler proof that relies on fewer non-trivial results. In particular, our proof of \Cref{lem:qpbr} does not require to use of popular difference sets or shift near-invariant sets. This more elementary proof provides a clearer understanding of the fundamental ideas behind \Cref{lem:qpbr} and could potentially help guide work towards achieving lower bounds in further research.
+
+\section{Future Work}
+As in \cite{asadi2022worstcase}, we pose the question of whether an efficient verifier (i.e. Freivald's Algorithm; \Cref{lem:freivald}) is necessary for this reduction. We remark that it may be possible to achieve this by recursively applying the reduction. That is, to use the initial reduction from \Cref{thm:reduction} without repeating as an average-case algorithm and using it as input to the reduction.
+
+Moreover, while our proof of \Cref{lem:qpbr} is more elementary than in \cite{asadi2022worstcase}, we recognize that Chang's Lemma \cite{Chang2002} is a non-trivial result. Another potential direction is to identify whether Chang's lemma is necessary to achieve our bounds. Furthermore, our proof is more elementary at the cost of a few parameters. We suggest working to eliminate these costs, and in general providing tighter bounds for both versions of \Cref{lem:qpbr}.
+
+Lastly, we suggest further analysis on where our reduction stops working. In \Cref{sec:overview}, we showed that one can construct malicious algorithms that can make decomposing the input vectors difficult. A natural question is to ask whether this holds for our reduction, and what such an algorithm would look like. Moreover, we suggest looking into constructing a reduction that can work even in cases where $\alpha$ tends to 0 faster than our reduction can handle.
+
+
+
+\bibliographystyle{plainnat}
+\bibliography{ref}
+
+
+\end{document}

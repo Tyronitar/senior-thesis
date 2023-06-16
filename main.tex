@@ -1,0 +1,200 @@
+%%%%%%%%%%%%
+%% Please rename this main.tex file and the output PDF to
+%% [lastname_firstname_graduationyear]
+%% before submission.
+%%
+%% This .tex file is for use with BibLaTeX. Please use
+%% main-bibtex.tex instead if you prefer BibTeX.
+%%%%%%%%%%%%
+
+\documentclass[12pt]{caltech_thesis}
+\usepackage[hyphens]{url}
+\usepackage{lipsum}
+\usepackage{graphicx}
+
+\usepackage{todonotes}
+
+%% Tentative: newtx for better-looking Times
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+
+% Must use biblatex to produce the Published Contents and Contributions, per-chapter bibliography (if desired), etc.
+\usepackage[
+    backend=biber,natbib,
+    % IMPORTANT: load a style suitable for your discipline
+    style=authoryear
+]{biblatex}
+
+% Packages
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{mathtools}
+\usepackage{hyperref, cleveref}
+\usepackage{thmtools, thm-restate}
+\usepackage{algpseudocode, algorithm, amsthm}
+
+
+
+% Additional commands for ease of writing
+\newcommand{\defeq}{\vcentcolon=}
+\newcommand{\eqdef}{=\vcentcolon}
+\def\F{\mathbb{F}}
+\def\E{\mathbb{E}}
+\def\C{\mathbb{C}}
+\def\Var{\text{Var}}
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\phi}{\varphi}
+\newcommand{\rank}{\text{rank}}
+\newcommand{\codim}{\text{codim}}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{claim}{Claim}
+\newtheorem{definition}{Definition}
+
+
+
+% Name of your .bib file(s)
+\addbibresource{example.bib}
+\addbibresource{ownpubs.bib}
+
+\begin{document}
+
+% Do remember to remove the square bracket!
+\title{Worst-Case to Average-Case Reductions for Matrix Multiplication via Additive Combinatorics}
+\author{Nia McNichols}
+
+\degreeaward{Bachelors of Science in Computer Science}                 % Degree to be awarded
+\university{California Institute of Technology}    % Institution name
+\address{Pasadena, California}                     % Institution address
+\unilogo{caltech.png}                                 % Institution logo
+\copyyear{2023}  % Year (of graduation) on diploma
+\defenddate{June 12, 2023}
+
+\orcid{0000-0002-5132-9661}
+
+%% IMPORTANT: Select ONE of the rights statement below.
+\rightsstatement{All rights reserved}
+% \rightsstatement{All rights reserved except where otherwise noted}
+% \rightsstatement{Some rights reserved. This thesis is distributed under a [name license, e.g., ``Creative Commons Attribution-NonCommercial-ShareAlike License'']}
+
+%%  If you'd like to remove the Caltech logo from your title page, simply remove the "[logo]" text from the maketitle command
+\maketitle[logo]
+%\maketitle
+
+\begin{acknowledgements} 	 
+   I would like to thank my thesis advisor, Professor Chris Umans, for his guidance and mentorship. Working with you has been a wonderful experience, and it's been invaluable in my development as a researcher. Thank you for making time to meet with me every week to meet and check-in on my progress. Your constant support helped keep me motivated for this project and deepened my love for theoretical computer science. I couldn't have done any of this without you -- both literally and figuratively!
+\end{acknowledgements}
+
+\begin{abstract}
+   In the field of average-case complexity, we are concerned with how an algorithm performs on an average input, rather than the classical worst-case analysis. Of particular interest are worst-case to average-case reductions, that is transforming an algorithm that works on some fraction of inputs into a probabilistic one that works on \textit{all} inputs. Building on recent results in the field, we present a framework for average-case matrix multiplication algorithms. Explicitly, our framework provides a transformation for algorithms running in time $T(n)$ that work on a small fraction of inputs into ones running in time $\Tilde{O}(T(n))$ that work on all inputs, even in the case when this fraction rapidly tends to 0. Moreover, our framework requires fewer non-trivial results than similar methods, at the cost of minor asymptotic losses. 
+\end{abstract}
+
+%% Uncomment the `iknowhattodo' option to dismiss the instruction in the PDF.
+\begin{publishedcontent}%[iknowwhattodo]
+% List your publications and contributions here.
+\nocite{Cahn:etal:2015,Cahn:etal:2016}
+\end{publishedcontent}
+
+\tableofcontents
+\listoffigures
+\listoftables
+\printnomenclature
+
+\mainmatter
+
+\chapter{Introduction}
+The field of worst-case to average-case reductions \nomenclature{Reduction}{An algorithm that turns an instance of one problem into that of another one.} is concerned with turning an algorithm \nomenclature{Algorithm}{A finite sequence of steps or instructions for performing a computation.} that only works for some of its inputs into one that works on \textit{all} inputs. In this paper, we are particularly concerned with the case of reductions for matrix multiplication algorithms. Suppose we have an algorithm $\textsc{ALG}$ that computes $A\cdot B$ given matrices $A, B \in \F^{n \times n}$. However, this algorithm is faulty, and only works an $\alpha$ proportion of inputs, i.e. $\Pr_{A,B}[\textsc{ALG}(A,B) = A\cdot B] = \alpha$. Given such an algorithm, a natural question to ask is whether we can use it to create a new algorithm $\textsc{ALG}'$ that works for any inputs $A,B$. And if it is possible, how much more computational power is needed to achieve this worst-case behavior? In this paper, we examine such reductions for average-case algorithms for matrix multiplication that succeed on a constant fraction of inputs (e.g. 1\%), or even for an $\alpha$ that quickly tends to zero.
+
+
+
+\section{Background}
+
+The study of average-case complexity began with the work of Levin in \cite{Levin1986}. Although there are many problems thought to be intractable in the worst-case, this behavior may occur in practice rarely, making the average-case complexity a more practical measure of efficiency. In particular, there has been a large body of work on examining average-case complexity for many NP-complete problems (see \cite{bogdanov2021averagecase} for a comprehensive survey by Bogdanov and Trevisan of such works).
+
+For the problem of Matrix Multiplication, there is a weak reduction that requires the algorithm to have a high probability of success (see \Cref{sec:high}). More recently, \cite{asadi2022worstcase} has shown a much more powerful statement, which is restated below:
+\begin{theorem}[\cite{asadi2022worstcase}]
+\label{thm:asadi}
+    Let $\F = \F_p$ be a prime field, $n \in \mathbb{N}$, and $\alpha \defeq \alpha(n) \in (0, 1]$. Suppose that there is an algorithm $\mathsf{ALG}$ that in time $T(n)$, on input two matrices $A, B \in \F^{n\times n}$, computes $A\cdot B$ such that
+    \begin{equation*}
+        \Pr[\mathsf{ALG}(A, B) = A\cdot B] \geq \alpha,
+    \end{equation*}
+    where the randomness is over choice of $A, B$, and the randomness of $\mathsf{ALG}$. Then, 
+    \begin{itemize}
+        \item If $|\F| \leq 2/\alpha$, there exists a randomized algorithm $\textsc{ALG}'$ that for any $A,B \in \F^{n\times n}$ and $\delta > 0$, runs in time $\frac{\exp(O(\log^5(1/\alpha)))}{\delta}\cdot T(n)$, and outputs $A\cdot B$ with probability at least $1 - \delta$.
+        \item If $|\F| \geq 2/\alpha$, there exists a randomized algorithm $\textsc{ALG}'$ that for any $A,B \in \F^{n\times n}$ and $\delta > 0$, runs in time $O(\frac{1}{\delta \alpha^{4}}\cdot T(n))$, and outputs $A\cdot B$ with probability at least $1 - \delta$.
+    \end{itemize}
+\end{theorem}
+This theorem allows for an average-case reduction for even when $\alpha$ rapidly tends to 0. The main tool used to prove this theorem is a probabilistic form of the Quasi-Polynomial Bogolyubov-Ruzsa Lemma, originally proved by Sanders in \cite{Sanders2012}. Informally, this lemma states that for any set $A$, there is a large subspace $V$ contained in the sumset $4A$. The probabilistic version is restated below:
+
+\begin{lemma}[Probabilistic Quasi-Polynomial Bogolyubov-Ruzsa Lemma \citep{asadi2022worstcase}]
+    \label{lem:qpbrasadi}
+    Let $\F \defeq \F_p$ be a finite field and let $A \subseteq \F^n$ be a set of size $|A| = \alpha\cdot|\F|^n$ for some $\alpha \in [0,1]$.
+    Then, there exists a subspace $V \subseteq \mathbb{F}^n$ of dimension $\dim(V) \geq n - O(\log^4(1/\alpha))$ such that for all $v \in V$ it holds that
+    \begin{equation}
+    \label{eq:qpbrassadi}
+        \Pr_{a_1, a_2, a_3\in \mathbb{F}^n}[a_1, a_2 \in A, a_{3}, a_4 \in -A] \geq \Omega(\alpha^{5})\, ,
+    \end{equation}
+    where $a_4 = v - a_1 - a_2-a_3$. Furthermore, given query access to $A$, there is an algorithm that runs in time $O(\exp(\log^4(1/\alpha))\cdot\text{poly}\log(1/\delta)\cdot\text{poly}(n))$ and with probability $1-\delta$ computes the set $R = V^\perp$.
+\end{lemma}
+
+\section{Our Contribution}
+
+Our main result is building upon the work in \cite{asadi2022worstcase}. In particular, we present a proof of a new, more general version of \Cref{lem:qpbrasadi} that extends the argument to an arbitrary sumset $kA$, albeit with slightly worse parameters (see \Cref{lem:qpbr}). Moreover, our proof relies on more elementary machinery, making it easier to understand and build upon in future work.
+
+Using this version of the lemma, we provide an explicit reduction for matrix multiplication based on \Cref{thm:asadi} with negligible slowdown in the algorithm's performance. Formally, we show:
+\begin{restatable}{theorem}{thmreduction}
+\label{thm:reduction}
+    Let $\F \defeq \F_p$ be a finite field of order $p$, $n \in \mathbb{N}$, and $\alpha \defeq \alpha(n) \in (0, 1]$.
+    Suppose that there is an algorithm $\mathsf{ALG}$ that in time $T(n)$, on input two matrices $A, B \in \F^{n\times n}$, computes $A\cdot B$ such that
+    \begin{equation*}
+        \Pr[\mathsf{ALG}(A, B) = A\cdot B] \geq \alpha,
+    \end{equation*}
+    where the randomness is over choice of $A, B$, and the randomness of $\mathsf{ALG}$.
+    Then there is a randomized algorithm $\mathsf{ALG}'$ such that for all inputs $A, B \in \F^{n \times n}$ and $\delta > 0$, $\mathsf{ALG}'(A, B) = A \cdot B$ with probability at least $1 - \delta$ and runs in time $\frac{\exp(O(\log^5 (1/\alpha)))}{\delta}\cdot\log^2(1/\alpha)\cdot T(n)$.
+\end{restatable}
+\noindent In particular, if there's an algorithm running in time $T(n)$ with $\alpha > \exp(-\log^{1/c}(n))$ where $c > 5$, then the reduction gives a worst-case algorithm running in time $T(n)\cdot n^{o(1)}$.
+
+
+\section{This is Another Section}
+\lipsum[6-7] 
+
+\chapter{This is the Second Chapter}
+\begin{refsection}
+If you'd like to have separate bibliographies at the end of each chapter, put a \verb|refsection| around the material of each chapter, then cite as usual -- e.g.~\citep{GMP81,Ful83}. Then do a \verb|\printbibliography| just before the \verb|refsection| ends. \index{bibliography!by chapter}
+
+\printbibliography[heading=subbibliography]
+\end{refsection}
+
+
+\chapter{This is the Third Chapter}
+
+\publishedas{Cahn:etal:2015}
+
+[You can have chapters that were published as part of your thesis. The text style of the body should be single column, as it was submitted to the publisher, not formatted as the publisher did.]
+
+\chapter{This is the Fourth Chapter}
+\chapter{This is the Fifth Chapter}
+\chapter{This is the Sixth Chapter}
+\chapter{This is the Seventh Chapter}
+\chapter{This is the Eighth Chapter}
+
+\printbibliography[heading=bibintoc]
+
+\appendix
+
+\chapter{Questionnaire}
+\chapter{Consent Form}
+
+\printindex
+
+\theendnotes
+
+%% Pocket materials at the VERY END of thesis
+\pocketmaterial
+\extrachapter{Pocket Material: Map of Case Study Solar Systems} 
+
+
+\end{document}
